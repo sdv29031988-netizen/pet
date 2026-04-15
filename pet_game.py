@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import font as tkfont
 import os
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageTk, ImageFont
 
 ASSETS_DIR = "assets"
 
@@ -12,6 +12,7 @@ def create_pet_images():
         size = 150
         img = Image.new('RGBA', (size, size), bg_color)
         draw = ImageDraw.Draw(img)
+        draw.ellipse([10, 10, size-10, size-10], fill=bg_color)
         try:
             emoji_font = ImageFont.truetype("seguiemj.ttf", 80)
         except:
@@ -96,10 +97,16 @@ class PetGame:
         self.selected_pet = None
         self.pet_buttons = []
         self.status_labels = []
+        self.pet_thumbnails = []
+        self.main_pet_image = None
         
         self.setup_ui()
         self.create_pets()
         self.update_ui()
+        
+    def load_image_tk(self, path, size):
+        img = Image.open(path).resize(size, Image.Resampling.LANCZOS)
+        return ImageTk.PhotoImage(img)
         
     def setup_ui(self):
         title_font = tkfont.Font(family="Arial", size=24, weight="bold")
@@ -184,30 +191,20 @@ class PetGame:
         if self.selected_pet is None:
             self.selected_pet = self.pets[0]
             
-    def load_pet_image(self, pet_type):
-        img_path = f"{ASSETS_DIR}/{pet_type}.png"
-        if os.path.exists(img_path):
-            img = Image.open(img_path)
-            img = img.resize((150, 150), Image.Resampling.LANCZOS)
-            self.pet_photo = tk.PhotoImage(img)
-            self.pet_image_label.config(image=self.pet_photo)
-            
     def update_ui(self):
         for widget in self.pets_container.winfo_children():
             widget.destroy()
-        self.pet_buttons = []
+        self.pet_thumbnails = []
         
-        for pet in self.pets:
+        for i, pet in enumerate(self.pets):
             frame = tk.Frame(self.pets_container, bg="#3D566E", relief=tk.RAISED, bd=2)
             frame.pack(fill=tk.X, pady=5, padx=10)
             
             img_path = f"{ASSETS_DIR}/{pet.emoji}.png"
             if os.path.exists(img_path):
-                img = Image.open(img_path)
-                img = img.resize((50, 50), Image.Resampling.LANCZOS)
-                photo = tk.PhotoImage(img)
+                photo = self.load_image_tk(img_path, (50, 50))
+                self.pet_thumbnails.append(photo)
                 img_label = tk.Label(frame, image=photo, bg="#3D566E")
-                img_label.image = photo
                 img_label.pack(side=tk.LEFT, padx=10, pady=5)
             
             info_frame = tk.Frame(frame, bg="#3D566E")
@@ -237,7 +234,11 @@ class PetGame:
         pet = self.selected_pet
         self.pet_display.config(text=f"{pet.emoji} {pet.name}")
         self.status_label.config(text=pet.get_status_text())
-        self.load_pet_image(pet.emoji)
+        
+        img_path = f"{ASSETS_DIR}/{pet.emoji}.png"
+        if os.path.exists(img_path):
+            self.main_pet_image = self.load_image_tk(img_path, (150, 150))
+            self.pet_image_label.config(image=self.main_pet_image)
         
         stats = [("hunger", pet.hunger), ("mood", pet.mood), 
                 ("energy", pet.energy), ("health", pet.health)]
